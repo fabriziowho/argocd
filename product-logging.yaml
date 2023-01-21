@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     path: base-manifests
-    repoURL: https://gitlab.senec.com/operations/k8s/argocd_ops_product_logging.git
+    repoURL: https://github.com/fabriziowho/test-argocd-kafka.git
     targetRevision: master
   syncPolicy:
     automated: {}
