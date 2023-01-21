@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: product-logging
+  namespace: argocd
+spec:
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: base-manifests
+    repoURL: https://gitlab.senec.com/operations/k8s/argocd_ops_product_logging.git
+    targetRevision: master
+  syncPolicy:
+    automated: {}

@@ -1,0 +1,6 @@
+---
+index_patterns:
+  - log_opnsense__v1-*
+template:
+  settings:
+    plugins.index_state_management.rollover_alias: log_opnsense__v1

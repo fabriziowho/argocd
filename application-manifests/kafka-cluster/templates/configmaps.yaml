@@ -1,0 +1,281 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-logging-kafka
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+  annotations:
+    a8r.io/description: |
+      log4j configuration for the kafka cluster
+data:
+  log4j.properties: |-
+    log4j.appender.CONSOLE=org.apache.log4j.ConsoleAppender
+    log4j.appender.CONSOLE.layout=net.logstash.log4j.JSONEventLayoutV1
+    log4j.appender.CONSOLE.layout.locationInfo=false
+    kafka.root.logger.level={{ .Values.config.kafka.loglevel }}
+    log4j.rootLogger=${kafka.root.logger.level}, CONSOLE
+    log4j.logger.org.I0Itec.zkclient.ZkClient={{ .Values.config.kafka.loglevel }}
+    log4j.logger.org.apache.zookeeper={{ .Values.config.kafka.loglevel }}
+    log4j.logger.kafka={{ .Values.config.kafka.loglevel }}
+    log4j.logger.org.apache.kafka={{ .Values.config.kafka.loglevel }}
+    log4j.logger.kafka.request.logger=WARN, CONSOLE
+    log4j.logger.kafka.network.Processor=OFF
+    log4j.logger.kafka.server.KafkaApis=OFF
+    log4j.logger.kafka.network.RequestChannel$=WARN
+    log4j.logger.kafka.controller={{ .Values.config.kafka.loglevel }}
+    log4j.logger.kafka.log.LogCleaner={{ .Values.config.kafka.loglevel }}
+    log4j.logger.state.change.logger={{ .Values.config.kafka.loglevel }}
+    log4j.logger.kafka.authorizer.logger={{ .Values.config.kafka.loglevel }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-logging-user-operator
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+  annotations:
+    a8r.io/description: |
+      log4j configuration for the user operator
+data:
+  log4j.properties: |-
+    appender.console.type=Console
+    appender.console.name=STDOUT
+    appender.console.layout.type=JsonLayout
+    appender.console.layout.stacktraceAsString = true
+    appender.console.layout.eventEol = true
+    appender.console.layout.compact = true
+    rootLogger.level={{ .Values.config.userOperator.loglevel }}
+    rootLogger.appenderRefs=stdout
+    rootLogger.appenderRef.console.ref=STDOUT
+    rootLogger.additivity=false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-logging-topic-operator
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+  annotations:
+    a8r.io/description: |
+      log4j configuration for the topic operator
+data:
+  log4j.properties: |-
+    name=TOConfig
+    appender.console.type=Console
+    appender.console.name=STDOUT
+    appender.console.layout.type=JsonLayout
+    appender.console.layout.stacktraceAsString = true
+    appender.console.layout.eventEol = true
+    appender.console.layout.compact = true
+    rootLogger.level={{ .Values.config.topicOperator.loglevel }}
+    rootLogger.appenderRefs=stdout
+    rootLogger.appenderRef.console.ref=STDOUT
+    rootLogger.additivity=false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-logging-zookeeper
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+  annotations:
+    a8r.io/description: |
+      log4j configuration for the zookeper
+data:
+  log4j.properties: |-
+    log4j.appender.CONSOLE=org.apache.log4j.ConsoleAppender
+    log4j.appender.CONSOLE.layout=net.logstash.log4j.JSONEventLayoutV1
+    log4j.appender.CONSOLE.layout.locationInfo=false
+    zookeeper.root.logger={{ .Values.config.zookeeper.loglevel }}
+    log4j.rootLogger=${zookeeper.root.logger}, CONSOLE
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-logging-mirrormaker
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+  annotations:
+    a8r.io/description: |
+      log4j configuration for the mirrormaker
+data:
+  log4j.properties: |-
+    log4j.appender.CONSOLE=org.apache.log4j.ConsoleAppender
+    log4j.appender.CONSOLE.layout=net.logstash.log4j.JSONEventLayoutV1
+    log4j.appender.CONSOLE.layout.locationInfo=false
+    mirrormaker.root.logger={{ .Values.config.mirrormaker.loglevel }}
+    log4j.rootLogger=${mirrormaker.root.logger}, CONSOLE
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-metrics
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+  annotations:
+    a8r.io/description: |
+      metrics configuration for kafka + zookeeper
+data:
+  # taken from https://github.com/strimzi/strimzi-kafka-operator/blob/0.31.1/examples/metrics/kafka-metrics.yaml
+  kafka-metrics-config.yml: |
+    # See https://github.com/prometheus/jmx_exporter for more info about JMX Prometheus Exporter metrics
+    lowercaseOutputName: true
+    rules:
+      # Special cases and very specific rules
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), topic=(.+), partition=(.*)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        labels:
+          clientId: "$3"
+          topic: "$4"
+          partition: "$5"
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        labels:
+          clientId: "$3"
+          broker: "$4:$5"
+      - pattern: kafka.server<type=(.+), cipher=(.+), protocol=(.+), listener=(.+), networkProcessor=(.+)><>connections
+        name: kafka_server_$1_connections_tls_info
+        type: GAUGE
+        labels:
+          cipher: "$2"
+          protocol: "$3"
+          listener: "$4"
+          networkProcessor: "$5"
+      - pattern: kafka.server<type=(.+), clientSoftwareName=(.+), clientSoftwareVersion=(.+), listener=(.+), networkProcessor=(.+)><>connections
+        name: kafka_server_$1_connections_software
+        type: GAUGE
+        labels:
+          clientSoftwareName: "$2"
+          clientSoftwareVersion: "$3"
+          listener: "$4"
+          networkProcessor: "$5"
+      - pattern: "kafka.server<type=(.+), listener=(.+), networkProcessor=(.+)><>(.+):"
+        name: kafka_server_$1_$4
+        type: GAUGE
+        labels:
+          listener: "$2"
+          networkProcessor: "$3"
+      - pattern: kafka.server<type=(.+), listener=(.+), networkProcessor=(.+)><>(.+)
+        name: kafka_server_$1_$4
+        type: GAUGE
+        labels:
+          listener: "$2"
+          networkProcessor: "$3"
+      # Some percent metrics use MeanRate attribute
+      # Ex) kafka.server<type=(KafkaRequestHandlerPool), name=(RequestHandlerAvgIdlePercent)><>MeanRate
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*><>MeanRate
+        name: kafka_$1_$2_$3_percent
+        type: GAUGE
+      # Generic gauges for percents
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*><>Value
+        name: kafka_$1_$2_$3_percent
+        type: GAUGE
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)Percent\w*, (.+)=(.+)><>Value
+        name: kafka_$1_$2_$3_percent
+        type: GAUGE
+        labels:
+          "$4": "$5"
+      # Generic per-second counters with 0-2 key/value pairs
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+), (.+)=(.+)><>Count
+        name: kafka_$1_$2_$3_total
+        type: COUNTER
+        labels:
+          "$4": "$5"
+          "$6": "$7"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+)><>Count
+        name: kafka_$1_$2_$3_total
+        type: COUNTER
+        labels:
+          "$4": "$5"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*><>Count
+        name: kafka_$1_$2_$3_total
+        type: COUNTER
+      # Generic gauges with 0-2 key/value pairs
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        labels:
+          "$4": "$5"
+          "$6": "$7"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        labels:
+          "$4": "$5"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+      # Emulate Prometheus 'Summary' metrics for the exported 'Histogram's.
+      # Note that these are missing the '_sum' metric!
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>Count
+        name: kafka_$1_$2_$3_count
+        type: COUNTER
+        labels:
+          "$4": "$5"
+          "$6": "$7"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.*), (.+)=(.+)><>(\d+)thPercentile
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        labels:
+          "$4": "$5"
+          "$6": "$7"
+          quantile: "0.$8"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>Count
+        name: kafka_$1_$2_$3_count
+        type: COUNTER
+        labels:
+          "$4": "$5"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.*)><>(\d+)thPercentile
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        labels:
+          "$4": "$5"
+          quantile: "0.$6"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Count
+        name: kafka_$1_$2_$3_count
+        type: COUNTER
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>(\d+)thPercentile
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        labels:
+          quantile: "0.$4"
+  zookeeper-metrics-config.yml: |
+    # See https://github.com/prometheus/jmx_exporter for more info about JMX Prometheus Exporter metrics
+    lowercaseOutputName: true
+    rules:
+      # replicated Zookeeper
+      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+)><>(\\w+)"
+        name: "zookeeper_$2"
+        type: GAUGE
+      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+), name1=replica.(\\d+)><>(\\w+)"
+        name: "zookeeper_$3"
+        type: GAUGE
+        labels:
+          replicaId: "$2"
+      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+), name1=replica.(\\d+), name2=(\\w+)><>(Packets\\w+)"
+        name: "zookeeper_$4"
+        type: COUNTER
+        labels:
+          replicaId: "$2"
+          memberType: "$3"
+      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+), name1=replica.(\\d+), name2=(\\w+)><>(\\w+)"
+        name: "zookeeper_$4"
+        type: GAUGE
+        labels:
+          replicaId: "$2"
+          memberType: "$3"
+      - pattern: "org.apache.ZooKeeperService<name0=ReplicatedServer_id(\\d+), name1=replica.(\\d+), name2=(\\w+), name3=(\\w+)><>(\\w+)"
+        name: "zookeeper_$4_$5"
+        type: GAUGE
+        labels:
+          replicaId: "$2"
+          memberType: "$3"

@@ -1,0 +1,16 @@
+---
+index_patterns:
+  - example-*
+template:
+  aliases:
+    my_logs: {}
+  settings:
+    number_of_shards: 2
+    number_of_replicas: 1
+  mappings:
+    properties:
+      timestamp:
+        type: date
+        format: yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis
+      value:
+        type: double

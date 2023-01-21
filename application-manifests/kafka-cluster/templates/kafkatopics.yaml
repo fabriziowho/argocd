@@ -1,0 +1,24 @@
+{{- range $name, $config := .Values.config.topics }}
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: {{ $name }}
+  annotations:
+    a8r.io/description: |-
+{{ $config.description | indent 6 }}
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    strimzi.io/cluster: {{ $.Release.Name }}
+spec:
+  partitions: {{ $config.partitions | default $.Values.config.topicDefaults.partitions }}
+  replicas: {{ $config.replicas | default $.Values.config.topicDefaults.replicas }}
+  config:
+    {{- if $config.retentionMs }}
+    retention.ms: {{ $config.retentionMs }}
+    {{- end }}
+    {{- if $config.segmentBytes }}
+    segment.bytes: {{ $config.segmentBytes }}
+    {{- end }}
+{{- end }}

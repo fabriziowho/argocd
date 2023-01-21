@@ -1,0 +1,6 @@
+apiVersion: v2
+name: opensearch-senec
+description: Deployment for Opensearch instance `opensearch-senec`.
+type: application
+version: 1.0.0
+appVersion: "1.0"

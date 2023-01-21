@@ -1,0 +1,118 @@
+{{- if .Values.config.opensearch.dataprepper.enabled -}}
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: data-prepper-config
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: data-prepper-config
+    creationPolicy: Owner
+  data:
+    - secretKey: pipeline.yaml
+      remoteRef:
+        key: {{ .Values.config.vault.name }}/data/data-prepper-config
+        property: pipeline.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: data-prepper
+  name: data-prepper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-prepper
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: data-prepper
+    spec:
+      containers:
+        - image: opensearchproject/data-prepper:2
+          name: data-prepper
+          ports:
+            - containerPort: 21890
+              name: oltp-trace
+            - containerPort: 21891
+              name: oltp-metric
+          volumeMounts:
+            - name: prepper-config-pipelines
+              subPath: pipeline.yaml
+              readOnly: true
+              mountPath: /usr/share/data-prepper/pipelines/pipeline.yaml
+            - name: opensearch-ca
+              readOnly: true
+              mountPath: /ssl/opensearch-ca.crt
+              subPath: ca.crt
+            - name: data-prepper-tls
+              readOnly: true
+              mountPath: /ssl/data-prepper
+          resources:
+            {{- if or .Values.config.opensearch.dataprepper.cpu.limit .Values.config.opensearch.dataprepper.memory.limit }}
+            limits:
+              {{- if .Values.config.opensearch.dataprepper.cpu.limit }}
+              cpu: {{ .Values.config.opensearch.dataprepper.cpu.limit }}
+              {{- end }}
+              {{- if .Values.config.opensearch.dataprepper.memory.limit }}
+              memory: {{ .Values.config.opensearch.dataprepper.memory.limit }}
+              {{- end }}
+            {{- end }}
+            requests:
+              cpu: {{ .Values.config.opensearch.dataprepper.cpu.request }}
+              memory: {{ .Values.config.opensearch.dataprepper.memory.request }}
+      restartPolicy: Always
+      volumes:
+        - name: prepper-config-pipelines
+          secret:
+            secretName: data-prepper-config
+            items:
+              - key: pipeline.yaml
+                path: pipeline.yaml
+        - name: opensearch-ca
+          secret:
+            secretName: opensearch-cluster-ca
+        - name: data-prepper-tls
+          secret:
+            secretName: data-prepper-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: data-prepper-tls
+spec:
+  dnsNames:
+    - data-prepper.{{ .Values.global.cluster.domain }}
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: data-prepper-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: data-prepper
+  name: data-prepper
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: data-prepper.{{ .Values.global.cluster.domain }}
+spec:
+  type: LoadBalancer
+  ports:
+    - name: oltp-trace
+      port: 21890
+      targetPort: oltp-trace
+    - name: oltp-metric
+      port: 21891
+      targetPort: oltp-metric
+  selector:
+    app: data-prepper
+{{- end }}

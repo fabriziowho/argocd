@@ -1,0 +1,39 @@
+{{- range $name, $config := .Values.config.user }}
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: {{ $name }}
+  annotations:
+    a8r.io/description: |-
+{{ $config.description | indent 6 }}
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    strimzi.io/cluster: {{ $.Release.Name }}
+spec:
+  template:
+    secret:
+      metadata:
+        annotations:
+          {{- if $config.annotations }}
+{{ toYaml $config.annotations | indent 10 }}
+          {{- end }}
+  authentication:
+    type: {{ $config.authentication.type }}
+  authorization:
+    type: simple
+    acls:
+    {{- range $resource := $config.authorization }}
+      - resource:
+          type: {{ $resource.resource.type }}
+          {{- if $resource.resource.name }}
+          name: {{ quote $resource.resource.name }}
+          {{- end }}
+          patternType: {{ $resource.resource.patterntype | default "literal" }}
+        operations:
+          {{- range $operation := $resource.operations }}
+          - {{ $operation }}
+          {{- end }}
+    {{- end }}
+{{- end }}

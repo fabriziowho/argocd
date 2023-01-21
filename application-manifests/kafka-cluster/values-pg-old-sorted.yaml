@@ -1,0 +1,165 @@
+#
+# Configuration values to be applied for cluster(s) in environment 'pg'.
+#
+
+config:
+  kafka:
+    version: 3.3.1
+    interBrokerProtocolVersion: 3.3
+    replicas: 3
+    listeners:
+      internal:
+        type: internal
+        port: 9093
+        tls: true
+        authentication:
+          type: scram-sha-512
+      external:
+        type: ingress
+        class: nginx
+        port: 9094
+        tls: true
+        certManager: true
+        namePrefix: kafka
+        authentication:
+          type: scram-sha-512
+    default:
+      replicationFactor: 3
+      minInsyncReplicas: 2
+    offsetsTopic:
+      replicationFactor: 3
+    log:
+      replicationFactor: 3
+      minInsyncReplicas: 2
+    storage:
+      type: jbod
+      volumes:
+        - type: persistent-claim
+          size: 20Gi
+    memory:
+      request: 4Gi
+      limit: 4Gi
+    cpu:
+      request: 256m
+      limit: 256m
+    loglevel: INFO
+    template:
+      clusterCaCert:
+        annotations:
+          reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+          reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: vector
+          reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
+          reflector.v1.k8s.emberstack.com/reflection-auto-namespaces: vector
+  zookeeper:
+    replicas: 3
+    storage:
+      type: persistent-claim
+      size: 10Gi
+    memory:
+      request: 2Gi
+      limit: 2Gi
+    cpu:
+      request: 512m
+      limit: 512m
+    loglevel: INFO
+  kafkaExporter:
+    loglevel: INFO
+    memory:
+      request: 512Mi
+      limit: 512Mi
+    cpu:
+      request: 100m
+      limit: 100m
+  topicOperator:
+    loglevel: INFO
+    memory:
+      request: 512Mi
+      limit: 512Mi
+    cpu:
+      request: 100m
+      limit: 1
+  userOperator:
+    loglevel: INFO
+    memory:
+      request: 512Mi
+      limit: 512Mi
+    cpu:
+      request: 100m
+      limit: 1
+  mirrormaker:
+    loglevel: INFO
+  topicDefaults:
+    partitions: 4
+    replicas: 3
+  topics:
+    log-type-vector:
+      description: Topic for Vector.dev logs
+    log-type-opnsense:
+      description: Topic for OPNsense logs
+    log-type-haproxy:
+      description: Topic for HAProxy logs
+    log-type-fortinet:
+      description: Topic for FortiNet logs
+  user:
+    akhq:
+      description: Service-Account for AKHQ
+      authentication:
+        type: scram-sha-512
+      authorization:
+        - resource:
+            type: cluster
+          operations:
+            - Describe
+            - DescribeConfigs
+        - resource:
+            type: group
+            name: "*"
+          operations:
+            - Read
+        - resource:
+            type: topic
+            name: "*"
+          operations:
+            - Read
+            - DescribeConfigs
+    vector:
+      description: Service-Account for Vector
+      annotations:
+        reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+        reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "vector"
+        reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
+        reflector.v1.k8s.emberstack.com/reflection-auto-namespaces: "vector"
+      authentication:
+        type: scram-sha-512
+      authorization:
+        - resource:
+            type: group
+            name: vector-aggregator
+          operations:
+            - Read
+        - resource:
+            type: topic
+            name: log-type-
+            patterntype: prefix
+          operations:
+            - Read
+            - Write
+            - Describe
+    vector-external:
+      description: Service-Account for Vector
+      authentication:
+        type: scram-sha-512
+      authorization:
+        - resource:
+            type: group
+            name: vector-aggregator
+          operations:
+            - Read
+        - resource:
+            type: topic
+            name: log-type-
+            patterntype: prefix
+          operations:
+            - Read
+            - Write
+            - Describe

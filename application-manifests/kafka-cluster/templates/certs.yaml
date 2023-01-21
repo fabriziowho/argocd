@@ -1,0 +1,19 @@
+{{- range $name, $config := .Values.config.kafka.listeners }}
+{{- if $config.certManager }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: listener-{{ $name }}-tls
+spec:
+  dnsNames:
+    - {{ $config.namePrefix }}-bootstrap.{{ $.Values.global.cluster.domain }}
+    {{- range $i, $e := until ($.Values.config.kafka.replicas | int) }}
+    - {{ $config.namePrefix }}-broker-{{ $i }}.{{ $.Values.global.cluster.domain }}
+    {{- end}}
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: listener-{{ $name }}-tls
+{{- end }}
+{{- end }}

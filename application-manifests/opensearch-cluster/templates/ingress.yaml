@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-dashboard
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - opensearch.{{ .Values.global.cluster.domain }}
+      secretName: opensearch-cluster-dashboards-tls
+  rules:
+    - host: opensearch.{{ .Values.global.cluster.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: opensearch-cluster-dashboards
+                port:
+                  number: 5601

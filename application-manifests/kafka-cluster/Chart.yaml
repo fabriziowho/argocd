@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-cluster
+description: Deployment for kafka instance `kafka-cluster`.
+type: application
+version: 1.0.0
+appVersion: "1.0"

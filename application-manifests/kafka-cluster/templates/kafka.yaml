@@ -1,0 +1,185 @@
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    a8r.io/description: |
+      Deploys a kafka cluster with zookeeper, kafkaExporter and entityOperator.
+      Is managed by the strimzi-kafka-operator.
+spec:
+  kafka:
+    version: {{ .Values.config.kafka.version }}
+    replicas: {{ .Values.config.kafka.replicas }}
+    template:
+      persistentVolumeClaim:
+        metadata:
+          annotations:
+            argocd.argoproj.io/sync-options: Prune=false
+            argocd.argoproj.io/compare-options: IgnoreExtraneous
+      pod:
+        metadata:
+          annotations:
+            co.elastic.logs/json.keys_under_root: "true"
+      clusterCaCert:
+        metadata:
+          annotations:
+            {{- if .Values.config.kafka.template.clusterCaCert.annotations }}
+{{ toYaml .Values.config.kafka.template.clusterCaCert.annotations | indent 12 }}
+            {{- end }}
+            kubed.appscode.com/sync: "" {{- /* necessary to sync ca-cert into namespaces */}}
+    authorization:
+      type: simple
+    listeners:
+      {{- range $name, $config := .Values.config.kafka.listeners }}
+      - name: {{ $name }}
+        port: {{ $config.port }}
+        type: {{ $config.type }}
+        tls: true
+        authentication:
+          type: {{ $config.authentication.type }}
+        {{- if eq $config.type "ingress" }}
+        configuration:
+          bootstrap:
+            host: {{ $config.namePrefix }}-bootstrap.{{ $.Values.global.cluster.domain }}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: {{ $config.namePrefix }}-bootstrap.{{ $.Values.global.cluster.domain }}
+              external-dns.alpha.kubernetes.io/ttl: "60"
+              kubernetes.io/ingress.class: {{ $config.class }}
+          brokers:
+            {{- range $i, $e := until ($.Values.config.kafka.replicas | int) }}
+            - broker: {{ $i }}
+              host: {{ $config.namePrefix }}-broker-{{ $i }}.{{ $.Values.global.cluster.domain }}
+              annotations:
+                external-dns.alpha.kubernetes.io/hostname: {{ $config.namePrefix }}-broker-{{ $i }}.{{ $.Values.global.cluster.domain }}
+                external-dns.alpha.kubernetes.io/ttl: "60"
+                kubernetes.io/ingress.class: {{ $config.class }}
+            {{- end }}
+          {{- if $config.certManager }}
+          brokerCertChainAndKey:
+            secretName: listener-{{ $name }}-tls
+            certificate: tls.crt
+            key: tls.key
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    config:
+      default.replication.factor: {{ .Values.config.kafka.default.replicationFactor }}
+      min.insync.replicas: {{ .Values.config.kafka.default.minInsyncReplicas }}
+      offsets.topic.replication.factor: {{ .Values.config.kafka.offsetsTopic.replicationFactor }}
+      transaction.state.log.replication.factor: {{ .Values.config.kafka.log.replicationFactor }}
+      transaction.state.log.min.isr: {{ .Values.config.kafka.log.minInsyncReplicas }}
+      inter.broker.protocol.version: {{ .Values.config.kafka.interBrokerProtocolVersion }}
+      auto.create.topics.enable: "false"
+    logging:
+      type: external
+      valueFrom:
+        configMapKeyRef:
+          name: {{ .Release.Name }}-logging-kafka
+          key: log4j.properties
+    storage:
+      type: {{ .Values.config.kafka.storage.type }}
+      volumes:
+        {{- range $index, $config := .Values.config.kafka.storage.volumes }}
+        - id: {{ $index }}
+          type: {{ $config.type }}
+          size: {{ $config.size }}
+          deleteClaim: false
+        {{- end }}
+    resources:
+      requests:
+        memory: {{ .Values.config.kafka.memory.request }}
+        cpu: {{ .Values.config.kafka.cpu.request }}
+      limits:
+        memory: {{ .Values.config.kafka.memory.limit }}
+        cpu: {{ .Values.config.kafka.cpu.limit }}
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: {{ .Release.Name }}-metrics
+          key: kafka-metrics-config.yml
+  zookeeper:
+    replicas: {{ .Values.config.zookeeper.replicas }}
+    storage:
+      type: {{ .Values.config.zookeeper.storage.type }}
+      size: {{ .Values.config.zookeeper.storage.size }}
+      deleteClaim: false
+      class: default
+    template:
+      persistentVolumeClaim:
+        metadata:
+          annotations:
+            argocd.argoproj.io/sync-options: Prune=false
+            argocd.argoproj.io/compare-options: IgnoreExtraneous
+      pod:
+        metadata:
+          annotations:
+            co.elastic.logs/json.keys_under_root: "true"
+    logging:
+      type: external
+      valueFrom:
+        configMapKeyRef:
+          name: {{ .Release.Name }}-logging-zookeeper
+          key: log4j.properties
+    resources:
+      requests:
+        memory: {{ .Values.config.zookeeper.memory.request }}
+        cpu: {{ .Values.config.zookeeper.cpu.request }}
+      limits:
+        memory: {{ .Values.config.zookeeper.memory.limit }}
+        cpu: {{ .Values.config.zookeeper.cpu.limit }}
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: {{ .Release.Name }}-metrics
+          key: zookeeper-metrics-config.yml
+  kafkaExporter:
+    groupRegex: ".*"
+    topicRegex: ".*"
+    resources:
+      requests:
+        memory: {{ .Values.config.kafkaExporter.memory.request }}
+        cpu: {{ .Values.config.kafkaExporter.cpu.request }}
+      limits:
+        memory: {{ .Values.config.kafkaExporter.memory.limit }}
+        cpu: {{ .Values.config.kafkaExporter.cpu.limit }}
+  entityOperator:
+    template:
+      pod:
+        metadata:
+          annotations:
+            co.elastic.logs/json.keys_under_root: "true"
+    topicOperator:
+      resources:
+        requests:
+          memory: {{ .Values.config.topicOperator.memory.request }}
+          cpu: {{ .Values.config.topicOperator.cpu.request }}
+        limits:
+          memory: {{ .Values.config.topicOperator.memory.limit }}
+          cpu: {{ .Values.config.topicOperator.cpu.limit }}
+      logging:
+        type: external
+        valueFrom:
+          configMapKeyRef:
+            name: {{ .Release.Name }}-logging-topic-operator
+            key: log4j.properties
+    userOperator:
+      resources:
+        requests:
+          memory: {{ .Values.config.userOperator.memory.request }}
+          cpu: {{ .Values.config.userOperator.cpu.request }}
+        limits:
+          memory: {{ .Values.config.userOperator.memory.limit }}
+          cpu: {{ .Values.config.userOperator.cpu.limit }}
+      logging:
+        type: external
+        valueFrom:
+          configMapKeyRef:
+            name: {{ .Release.Name }}-logging-user-operator
+            key: log4j.properties
+      secretPrefix: {{ .Release.Name }}-

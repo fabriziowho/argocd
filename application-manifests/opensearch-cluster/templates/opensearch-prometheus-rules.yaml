@@ -1,0 +1,98 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: opensearch-rules
+spec:
+  groups:
+  - name: opensearch
+    rules:
+    - alert: OpensearchHeapUsageTooHigh
+      expr: opensearch_jvm_mem_heap_used_bytes / opensearch_jvm_mem_heap_max_bytes * 100 > 90
+      for: 2m
+      labels:
+        severity: critical
+        namespace: monitoring
+      annotations:
+        summary: Opensearch Heap Usage Too High (instance {{`{{ $labels.instance }}`}})
+        description: "The heap usage is over 90% ({{`{{ $value }}`}}%)"
+    - alert: OpensearchHeapUsageWarning
+      expr: opensearch_jvm_mem_heap_used_bytes / opensearch_jvm_mem_heap_max_bytes * 100 > 80
+      for: 2m
+      labels:
+        severity: warning
+        namespace: monitoring
+      annotations:
+        summary: Opensearch Heap Usage warning (instance {{`{{ $labels.instance }}`}})
+        description: "The heap usage is over 80% ({{`{{ $value }}`}}%)"
+    - alert: OpensearchDiskOutOfSpace
+      expr: opensearch_fs_total_available_bytes / opensearch_fs_total_total_bytes * 100 < 10
+      for: 0m
+      labels:
+        severity: critical
+        namespace: monitoring
+      annotations:
+        summary: Opensearch disk out of space (instance {{`{{ $labels.instance }}`}})
+        description: "The disk usage is over 90% ({{`{{ $value }}`}}%)"
+    - alert: OpensearchDiskSpaceLow
+      expr: opensearch_fs_total_available_bytes / opensearch_fs_total_total_bytes * 100 < 20
+      for: 2m
+      labels:
+        severity: warning
+        namespace: monitoring
+      annotations:
+        summary: Opensearch disk space low (instance {{`{{ $labels.instance }}`}})
+        description: "The disk usage is over 80% ({{`{{ $value }}`}}%)"
+    - alert: OpensearchClusterRed
+      expr: opensearch_cluster_status == 1
+      for: 0m
+      labels:
+        severity: critical
+        namespace: monitoring
+      annotations:
+        summary: Opensearch Cluster Red (instance {{`{{ $labels.instance }}`}})
+        description: "Opensearch Cluster Red status"
+    - alert: OpensearchHealthyNodes
+      expr: opensearch_cluster_nodes_number < {{ include "opensearch.totalNodes" . }}
+      for: 0m
+      labels:
+        severity: critical
+        namespace: monitoring
+      annotations:
+        summary: Opensearch Healthy Nodes (instance {{`{{ $labels.instance }}`}})
+        description: "Missing node in Opensearch cluster ({{`{{ $value }}`}} of {{ include "opensearch.totalNodes" . }} available)"
+    - alert: OpensearchHealthyDataNodes
+      expr: opensearch_cluster_datanodes_number < {{ include "opensearch.dataNodes" . }}
+      for: 0m
+      labels:
+        severity: critical
+        namespace: monitoring
+      annotations:
+        summary: Opensearch Healthy Data Nodes (instance {{`{{ $labels.instance }}`}})
+        description: "Missing data node in Opensearch cluster ({{`{{ $value }}`}} of {{ include "opensearch.dataNodes" . }} available)"
+    - alert: OpensearchActiveShardsPercentage
+      expr: opensearch_cluster_shards_active_percent < 100
+      for: 0m
+      labels:
+        severity: info
+        namespace: monitoring
+      annotations:
+        summary: Opensearch active shards (instance {{`{{ $labels.instance }}`}})
+        description: "Opensearch has only {{`{{ $value }}`}}% shards in active state."
+    - alert: OpensearchPendingTasks
+      expr: opensearch_cluster_pending_tasks_number > 0
+      for: 15m
+      labels:
+        severity: warning
+        namespace: monitoring
+      annotations:
+        summary: Opensearch pending tasks (instance {{`{{ $labels.instance }}`}})
+        description: "Opensearch has {{`{{ $value }}`}} pending tasks. Cluster works slowly."
+    - alert: OpensearchNoNewDocuments
+      expr: max(rate(opensearch_indices_indexing_index_count{node=~"opensearch-cluster-data.+"}[15m])) < 3
+      for: 15m
+      labels:
+        severity: warning
+        namespace: monitoring
+      annotations:
+        summary: Opensearch no new documents (instance {{`{{ $labels.instance }}`}})
+        description: "No new documents for 15 min!"
