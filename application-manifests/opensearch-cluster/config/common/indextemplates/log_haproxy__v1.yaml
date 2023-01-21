@@ -1,6 +1,0 @@
----
-index_patterns:
-  - log_haproxy__v1-*
-template:
-  settings:
-    plugins.index_state_management.rollover_alias: log_haproxy__v1

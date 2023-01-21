@@ -12,12 +12,12 @@ spec:
   project: default
   source:
     path: application-manifests/kafka-cluster
-    repoURL: https://github.com/fabriziowho/test-argocd-kafka.git
-    targetRevision: master
+    repoURL: git@github.com:fabriziowho/test-argocd-kafka.git
+    targetRevision: main
     helm:
       valueFiles:
         - values.yaml
-        - values-{{ .Values.global.cluster.environment }}.yaml
+        - values-pg.yaml
       values: |
         --- #yaml
         global:
