@@ -44,17 +44,17 @@ spec:
         {{- if eq $config.type "ingress" }}
         configuration:
           bootstrap:
-            host: {{ $config.namePrefix }}-bootstrap.{{ $.Values.global.cluster.domain }}
+            host: {{ $config.namePrefix }}-bootstrap.test
             annotations:
-              external-dns.alpha.kubernetes.io/hostname: {{ $config.namePrefix }}-bootstrap.{{ $.Values.global.cluster.domain }}
+              external-dns.alpha.kubernetes.io/hostname: {{ $config.namePrefix }}-bootstrap.test
               external-dns.alpha.kubernetes.io/ttl: "60"
               kubernetes.io/ingress.class: {{ $config.class }}
           brokers:
             {{- range $i, $e := until ($.Values.config.kafka.replicas | int) }}
             - broker: {{ $i }}
-              host: {{ $config.namePrefix }}-broker-{{ $i }}.{{ $.Values.global.cluster.domain }}
+              host: {{ $config.namePrefix }}-broker-{{ $i }}.test
               annotations:
-                external-dns.alpha.kubernetes.io/hostname: {{ $config.namePrefix }}-broker-{{ $i }}.{{ $.Values.global.cluster.domain }}
+                external-dns.alpha.kubernetes.io/hostname: {{ $config.namePrefix }}-broker-{{ $i }}.test
                 external-dns.alpha.kubernetes.io/ttl: "60"
                 kubernetes.io/ingress.class: {{ $config.class }}
             {{- end }}

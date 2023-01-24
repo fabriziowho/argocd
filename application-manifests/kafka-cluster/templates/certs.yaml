@@ -6,9 +6,9 @@ metadata:
   name: listener-{{ $name }}-tls
 spec:
   dnsNames:
-    - {{ $config.namePrefix }}-bootstrap.{{ $.Values.global.cluster.domain }}
+    - {{ $config.namePrefix }}-bootstrap.test
     {{- range $i, $e := until ($.Values.config.kafka.replicas | int) }}
-    - {{ $config.namePrefix }}-broker-{{ $i }}.{{ $.Values.global.cluster.domain }}
+    - {{ $config.namePrefix }}-broker-{{ $i }}.test
     {{- end}}
   issuerRef:
     group: cert-manager.io
