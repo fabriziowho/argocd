@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-helm
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    path: application-manifests/hello-helm
+    repoURL: git@github.com:fabriziowho/test-argocd.git
+    targetRevision: main
+    helm:
+      valueFiles:
+        - values-pg.yaml
+  destination:
+    namespace: hello-helm
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true

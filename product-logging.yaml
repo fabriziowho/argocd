@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     path: base-manifests
-    repoURL: git@github.com:fabriziowho/test-argocd-kafka.git
+    repoURL: git@github.com:fabriziowho/test-argocd.git
     targetRevision: main
   syncPolicy:
     automated: {}
