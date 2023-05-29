@@ -10,7 +10,11 @@ spec:
   project: default
   source:
     path: base-manifests
-    repoURL: git@github.com:fabriziowho/argocd.git
+    repoURL: https://github.com/fabriziowho/argocd.git
     targetRevision: main
   syncPolicy:
-    automated: {}
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
