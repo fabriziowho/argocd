@@ -9,7 +9,7 @@ spec:
   project: default
   source:
     path: application-manifests/hello-helm
-    repoURL: git@github.com:fabriziowho/test-argocd.git
+    repoURL: https://github.com/fabriziowho/argocd.git
     targetRevision: main
     helm:
       valueFiles:
