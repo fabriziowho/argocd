@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: product-logging
+  name: webapp
   namespace: argocd
 spec:
   destination:
@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     path: base-manifests
-    repoURL: git@github.com:fabriziowho/test-argocd.git
+    repoURL: git@github.com:fabriziowho/argocd.git
     targetRevision: main
   syncPolicy:
     automated: {}
