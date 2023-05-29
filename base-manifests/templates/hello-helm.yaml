@@ -13,7 +13,7 @@ spec:
     targetRevision: main
     helm:
       valueFiles:
-        - values-pg.yaml
+        - values.yaml
   destination:
     namespace: hello-helm
     server: https://kubernetes.default.svc
