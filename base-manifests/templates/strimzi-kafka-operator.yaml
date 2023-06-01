@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: strimzi-kafka-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    a8r.io/description: |
+      The Application for deploying the Strimzi Kafka Operator operator via Helm Chart.
+spec:
+  project: default
+  source:
+    path: helm-charts/helm3/strimzi-kafka-operator
+    repoURL: https://github.com/strimzi/strimzi-kafka-operator.git
+    targetRevision: 0.32.0
+    helm:
+      values: |
+        watchAnyNamespace: true
+        labels:
+          app.kubernetes.io/name: strimzi-kafka-operator
+          app.kubernetes.io/instance: strimzi-kafka-operator
+        podSecurityContext:
+          fsGroup: 1001
+        securityContext:
+          runAsUser: 1001
+        resources:
+          limits:
+            memory: 768Mi
+            cpu: 1000m
+          requests:
+            memory: 576Mi
+            cpu: 200m
+  destination:
+    namespace: kafka-operator
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
